@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'package:favorite_track_management/widgets/track_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'modules/user.dart';
 
 class HomePage extends StatefulWidget {
   HomePage({Key key, this.title}) : super(key: key);
@@ -14,11 +17,59 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<TrackTile> _trackList = [];
+  User _authenticatedUser;
+  String _firebaseApiKey;
 
   @override
   void initState() {
-    _fetchTracks();
+    _initApp();
     super.initState();
+  }
+
+  _initApp() async {
+    await _loadApiKeys();
+    await _authenticate();
+    await _fetchTracks();
+  }
+
+  Future _loadApiKeys() async {
+    String jsonString = await rootBundle.loadString('api_keys.json');
+    final jsonResponse = json.decode(jsonString);
+    _firebaseApiKey = jsonResponse["firebase"];
+  }
+
+  Future<Map<String, dynamic>> _authenticate() async {
+    Map<String, dynamic> _authData = {'returnSecureToken': true};
+    http.Response response;
+
+    response = await http.post(
+        'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$_firebaseApiKey',
+        body: json.encode(_authData),
+        headers: {'Content-Type': 'application/json'});
+
+    bool hasError = true;
+    String message = "Something went wrong!";
+
+    final Map<String, dynamic> responseData = json.decode(response.body);
+    print(responseData);
+    if (responseData.containsKey('idToken')) {
+      hasError = false;
+      _authenticatedUser =
+          User(id: responseData['localId'], token: responseData['idToken']);
+      final DateTime now = DateTime.now();
+      final DateTime expiryTime =
+          now.add(Duration(seconds: int.parse(responseData['expiresIn'])));
+
+      SharedPreferences _prefs = await SharedPreferences.getInstance();
+      _prefs.setString('userId', responseData['localId']);
+      _prefs.setString('token', responseData['idToken']);
+      _prefs.setString('refreshToken', responseData['refreshToken']);
+      _prefs.setString('expiryTime', expiryTime.toIso8601String());
+      print("AUTHENTICATED WITH ${_authenticatedUser.id}");
+    } else if (responseData['error']['message'] == 'OPERATION_NOT_ALLOWED') {
+      message = "This operation can't be allowed";
+    }
+    return {'success': !hasError, 'message': message};
   }
 
   Future _fetchTracks() async {
@@ -33,6 +84,7 @@ class _HomePageState extends State<HomePage> {
         image: element["image"],
         name: element["track_name"],
         year: element["release_year"],
+        authenticatedUser: _authenticatedUser,
       );
       tempList.add(newTile);
     });
