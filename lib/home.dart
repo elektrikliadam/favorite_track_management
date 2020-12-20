@@ -1,25 +1,24 @@
 import 'dart:convert';
+import 'package:favorite_track_management/scoped_model/main_model.dart';
 import 'package:favorite_track_management/widgets/track_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:scoped_model/scoped_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'modules/user.dart';
 
 class HomePage extends StatefulWidget {
-  HomePage({Key key, this.title}) : super(key: key);
+  HomePage({Key key, this.title, this.model}) : super(key: key);
 
   final String title;
+  final MainModel model;
 
   @override
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  List<TrackTile> _trackList = [];
-  User _authenticatedUser;
-  String _firebaseApiKey;
-
   @override
   void initState() {
     _initApp();
@@ -27,108 +26,53 @@ class _HomePageState extends State<HomePage> {
   }
 
   _initApp() async {
-    await _loadApiKeys();
-    await _authenticate();
-    await _fetchTracks();
-  }
-
-  Future _loadApiKeys() async {
-    String jsonString = await rootBundle.loadString('api_keys.json');
-    final jsonResponse = json.decode(jsonString);
-    _firebaseApiKey = jsonResponse["firebase"];
-  }
-
-  Future<Map<String, dynamic>> _authenticate() async {
-    Map<String, dynamic> _authData = {'returnSecureToken': true};
-    http.Response response;
-
-    response = await http.post(
-        'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$_firebaseApiKey',
-        body: json.encode(_authData),
-        headers: {'Content-Type': 'application/json'});
-
-    bool hasError = true;
-    String message = "Something went wrong!";
-
-    final Map<String, dynamic> responseData = json.decode(response.body);
-    print(responseData);
-    if (responseData.containsKey('idToken')) {
-      hasError = false;
-      _authenticatedUser =
-          User(id: responseData['localId'], token: responseData['idToken']);
-      final DateTime now = DateTime.now();
-      final DateTime expiryTime =
-          now.add(Duration(seconds: int.parse(responseData['expiresIn'])));
-
-      SharedPreferences _prefs = await SharedPreferences.getInstance();
-      _prefs.setString('userId', responseData['localId']);
-      _prefs.setString('token', responseData['idToken']);
-      _prefs.setString('refreshToken', responseData['refreshToken']);
-      _prefs.setString('expiryTime', expiryTime.toIso8601String());
-      print("AUTHENTICATED WITH ${_authenticatedUser.id}");
-    } else if (responseData['error']['message'] == 'OPERATION_NOT_ALLOWED') {
-      message = "This operation can't be allowed";
-    }
-    return {'success': !hasError, 'message': message};
-  }
-
-  Future _fetchTracks() async {
-    String jsonString = await rootBundle.loadString('assets/tracks.json');
-    final List jsonResponse = json.decode(jsonString);
-    List<TrackTile> tempList = [];
-
-    jsonResponse.forEach((element) {
-      TrackTile newTile = new TrackTile(
-        id: element["_id"],
-        band: element["track_band"],
-        image: element["image"],
-        name: element["track_name"],
-        year: element["release_year"],
-        authenticatedUser: _authenticatedUser,
-      );
-      tempList.add(newTile);
-    });
-
-    setState(() {
-      _trackList = tempList;
-    });
+    await widget.model.loadApiKeys();
+    await widget.model.authenticate();
+    await widget.model.fetchTracks();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                RaisedButton(
-                  child: Text("Liked Song List"),
-                  onPressed: () {},
-                ),
-                RaisedButton(
-                  child: Text("Disliked Song List"),
-                  onPressed: () {},
-                ),
-              ],
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _trackList.length,
-                itemBuilder: (context, i) {
-                  return _trackList[i];
-                },
-              ),
-            )
-          ],
+    return ScopedModelDescendant<MainModel>(
+        builder: (BuildContext context, Widget child, MainModel model) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
         ),
-      ),
-    );
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Row(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  RaisedButton(
+                    child: Text("Liked Song List"),
+                    onPressed: () {
+                      model.changeFilteredStatus(Status.Liked);
+                    },
+                  ),
+                  RaisedButton(
+                    child: Text("Disliked Song List"),
+                    onPressed: () {
+                      model.changeFilteredStatus(Status.Disliked);
+                    },
+                  ),
+                ],
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: model.displayTracks.length,
+                  itemBuilder: (context, i) {
+                    return model.displayTracks[i];
+                  },
+                ),
+              )
+            ],
+          ),
+        ),
+      );
+    });
   }
 }
