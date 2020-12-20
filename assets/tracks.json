@@ -1,0 +1,65 @@
+[
+    {
+      "_id": "4fcafb8e09b944238d56261f74bb35e4",
+      "track_name": "Black Head",
+      "track_band": "Under The Black",
+      "release_year": 1997,
+      "image": "black.png"
+    },
+    {
+      "_id": "dd55231d26e64358a656210dce25be0f",
+      "track_name": "Red Lines",
+      "track_band": "Red String",
+      "release_year": 2077,
+      "image": "red.png"
+    },
+    {
+      "_id": "4819cb36bd5f444fb4ddecbeb654f552",
+      "track_name": "Green Sky",
+      "track_band": "Green Dreamers",
+      "release_year": 1962,
+      "image": "green.png"
+    },
+    {
+      "_id": "4faa1d62942f4a3192d45f6c195c01e7",
+      "track_name": "Blue Haze",
+      "track_band": "Hazer",
+      "release_year": 2017,
+      "image": "blue.png"
+    },
+    {
+      "_id": "16b506809e6440d198ba4ef7ac443ed7",
+      "track_name": "Gray Lands",
+      "track_band": "Future dealers",
+      "release_year": 1999,
+      "image": "gray.png"
+    },
+    {
+      "_id": "d0c4ad7de8294a5ca849bdc2320e05cb",
+      "track_name": "Brown Codes",
+      "track_band": "Unknown Laces",
+      "release_year": 2003,
+      "image": "brown.png"
+    },
+    {
+      "_id": "afe293c319c3462dbfe17d77a08a456d",
+      "track_name": "Pink Bird",
+      "track_band": "Boom Freak",
+      "release_year": 2009,
+      "image": "pink.png"
+    },
+    {
+      "_id": "37784c3735c947a5a56a92779cd092f6",
+      "track_name": "Purple Lies",
+      "track_band": "Nonklo",
+      "release_year": 1967,
+      "image": "purple.png"
+    },
+    {
+      "_id": "34f46ec2f8934947a0606c65ccccf866",
+      "track_name": "Yellow Hazard",
+      "track_band": "Toxicologist",
+      "release_year": 2020,
+      "image": "yellow.png"
+    }
+  ]
