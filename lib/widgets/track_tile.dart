@@ -31,9 +31,56 @@ class TrackTile extends StatefulWidget {
 }
 
 class _TrackTileState extends State<TrackTile> {
+  Status _fetchedStatus = Status.Neutral;
+
   @override
   void initState() {
+    fetchStatus();
     super.initState();
+  }
+
+  Future<Null> fetchStatus() async {
+    try {
+      final http.Response response = await http.get(
+          'https://favorite-track-management-default-rtdb.firebaseio.com/users/${widget.authenticatedUser.id}/tracks/${widget.id}.json?auth=${widget.authenticatedUser.token}');
+      final Map<String, dynamic> _trackData = json.decode(response.body);
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        debugPrint("Couldn't fetch the tracks");
+        return;
+      }
+      setState(() {
+        _fetchedStatus = _trackData["status"];
+      });
+
+      return;
+    } catch (error) {
+      print(error.toString());
+      debugPrint("Unkown error while fetching track");
+      return;
+    }
+  }
+
+  Future<bool> updateStatus(Status changedStatus) async {
+    final Map<String, dynamic> _tempTrackData = {
+      "status": changedStatus.index,
+    };
+    try {
+      final http.Response response = await http.put(
+          'https://favorite-track-management-default-rtdb.firebaseio.com/users/${widget.authenticatedUser.id}/tracks/${widget.id}.json?auth=${widget.authenticatedUser.token}',
+          body: json.encode(_tempTrackData));
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        debugPrint("Connection error while updating track");
+        return false;
+      }
+
+      debugPrint("Track updated successfully");
+      setState(() {});
+
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   @override
@@ -49,15 +96,21 @@ class _TrackTileState extends State<TrackTile> {
             IconButton(
                 icon: Icon(
                   Icons.thumb_down,
-                  color: widget.status == Status.Disliked ? Colors.red : null,
+                  color: _fetchedStatus == Status.Disliked ? Colors.red : null,
                 ),
-                onPressed: () {}),
+                onPressed: () {
+                  updateStatus(Status.Disliked);
+                  _fetchedStatus = Status.Disliked;
+                }),
             IconButton(
                 icon: Icon(
                   Icons.thumb_up,
-                  color: widget.status == Status.Liked ? Colors.red : null,
+                  color: _fetchedStatus == Status.Liked ? Colors.red : null,
                 ),
-                onPressed: () {}),
+                onPressed: () {
+                  updateStatus(Status.Liked);
+                  _fetchedStatus = Status.Liked;
+                }),
           ],
         ));
   }
